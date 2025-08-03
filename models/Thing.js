@@ -1,18 +1,89 @@
-class Thing{
-  static _tableName = 'things';
+class Thing {
+  static _tableName = "things";
   static _client;
+  static name = "Thing";
 
-  static async create(){}
+  static _attributes = {
+    body: "string",
+  };
 
-  static async findByPk(){}
+  static async create(insertValues) {
+    const insertAttr = Object.entries(this._attributes)
+      .filter(([attr, domain]) => attr in insertValues)
+      .map(([attr]) => attr);
 
-  static async findAll(){}
+    const insertScheme = insertAttr
+      .map((currentAttr) => ` "${currentAttr}"`)
+      .join(",");
 
-  static async updateByPk(){}
+    const inserValueStr = insertAttr
+      .map((currentAttr) => {
+        const value = insertValues[currentAttr];
+        return typeof value === "string" ? `'value'` : value;
+      })
+      .join(",");
 
-  static async deleteByPk(){}
+    const queryStr = `
+    INSERT INTO ${this._tableName}(${insertScheme})
+    VALUES (${inserValueStr})
+    RETURNING *
+    `;
 
+    const { rows } = await this._client.query(queryStr);
+
+    return rows;
+  }
+
+  static async findByPk(pk) {
+    const { rows } = await this._client.query(`
+      SELECT *
+      FROM ${this._tableName}
+      WHERE id = ${pk}
+      `);
+    return rows;
+  }
+
+  static async findAll() {
+    const { rows } = await this._client.query(
+      `SELECT *
+       FROM ${this._tableName}`
+    );
+
+    return rows;
+  }
+
+  static async updateByPk({ id, updateValues }) {
+    const insertAttr = Object.entries(this._attributes)
+      .filter(([attr, domain]) => attr in updateValues)
+      .map(([attr]) => attr);
+
+    const inserValueStr = insertAttr
+      .map((attr) => {
+        const value = updateValues[attr];
+        return `${attr} = ${typeof value === "srring" ? "${value}" : value}`;
+      })
+      .join(",");
+
+    const { rows } = await this._client.query(`
+      UPDATE ${this._tableName}
+      SET ${inserValueStr}
+      WHERE id = ${id}
+      RETURNING *
+      `);
+
+    return rows;
+  }
+
+  static async deleteByPk(pk) {
+    const { rows } = await this._client.query(
+      `DELETE *
+      FROM ${this._tableName}
+      WHERE id = ${pk}
+      RETURNING *`
+    );
+
+    return rows;
+  }
 }
 
-
-module.exports = Thing
+module.exports = Thing;
